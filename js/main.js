@@ -219,25 +219,27 @@ function animate() {
 
     // Mover el personaje
     if (object) {
-        if (moveDirection.forward) object.position.z += moveSpeed * delta;
-        if (moveDirection.backward) object.position.z -= moveSpeed * delta;
-        if (moveDirection.left) object.position.x -= moveSpeed * delta;
-        if (moveDirection.right) object.position.x += moveSpeed * delta;
+        // Guardar la posición actual antes de aplicar el movimiento
+        const originalPosition = object.position.clone();
 
-        // Ajustar la posición de la cámara para mirar por encima del hombro
-        const cameraOffset = new THREE.Vector3(-70, 130, -300);  // Offset desde el objeto (ajustar según la altura del personaje)
-        const lookAtOffset = new THREE.Vector3(0, 100, 100);   // Punto al que miran los ojos del personaje
+        if (moveDirection.forward) object.position.z -= moveSpeed * delta;  // Movimiento hacia adelante (negativo en Z)
 
-        // Posición de la cámara
+        // Actualizar la posición de la cámara en base a la nueva posición del objeto
+        const cameraOffset = new THREE.Vector3(-70, 130, -300);  // Ajustar según el personaje
+        const lookAtOffset = new THREE.Vector3(0, 100, 100);    // Punto de mira del personaje
+
         const position = new THREE.Vector3();
         position.copy(object.position).add(cameraOffset);
         camera.position.copy(position);
 
-        // Punto de mira de la cámara (donde apuntan los ojos del personaje)
         const lookAtPosition = new THREE.Vector3();
         lookAtPosition.copy(object.position).add(lookAtOffset);
-       
         camera.lookAt(lookAtPosition);
+
+        // Verificar si se ha movido el objeto y actualizar su posición según el movimiento
+        if (!originalPosition.equals(object.position)) {
+            object.position.copy(originalPosition);  // Restaurar la posición original del objeto
+        }
     }
 
     renderer.render(scene, camera);
