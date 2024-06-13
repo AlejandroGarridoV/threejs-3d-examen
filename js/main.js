@@ -10,10 +10,10 @@ const params = {
     asset: 'Idle'
 };
 
-const assets = [
-    'Idle',
-    'Walk'
-];
+const assets = {
+    'Idle': null,
+    'Walk': null
+};
 
 const moveSpeed = 100; // Velocidad de movimiento
 const moveDirection = { forward: false, backward: false, left: false, right: false };
@@ -64,7 +64,12 @@ function init() {
     scene.add(grid);
 
     loader = new FBXLoader();
-    loadAsset(params.asset);
+    Promise.all([
+        preloadAsset('Idle'),
+        preloadAsset('Walk')
+    ]).then(() => {
+        loadAsset(params.asset);
+    });
 
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setPixelRatio(window.devicePixelRatio);
@@ -81,67 +86,81 @@ function init() {
     container.appendChild(stats.dom);
 
     const gui = new GUI();
-    gui.add(params, 'asset', assets).onChange(function (value) {
+    gui.add(params, 'asset', Object.keys(assets)).onChange(function (value) {
         loadAsset(value);
     });
 
     guiMorphsFolder = gui.addFolder('Morphs').hide();
 }
 
+function preloadAsset(asset) {
+    return new Promise((resolve, reject) => {
+        loader.load('models/fbx/' + asset + '.fbx', function (group) {
+            assets[asset] = group;
+            resolve();
+        }, undefined, function (error) {
+            console.error('Error loading asset:', asset, error);
+            reject(error);
+        });
+    });
+}
+
 function loadAsset(asset) {
     console.log('Loading asset:', asset);
-    loader.load('models/fbx/' + asset + '.fbx', function (group) {
-        console.log('Asset loaded:', asset);
-        if (object) {
-            object.traverse(function (child) {
-                if (child.material) {
-                    if (child.material.dispose) {
-                        child.material.dispose();
-                    }
-                    if (child.material.map && child.material.map.dispose) {
-                        child.material.map.dispose();
-                    }
-                }
-                if (child.geometry && child.geometry.dispose) {
-                    child.geometry.dispose();
-                }
-            });
-            scene.remove(object);
-        }
+    if (!assets[asset]) {
+        console.error('Asset not preloaded:', asset);
+        return;
+    }
 
-        object = group;
+    const group = assets[asset];
 
-        if (object.animations && object.animations.length) {
-            mixer = new THREE.AnimationMixer(object);
-            const action = mixer.clipAction(object.animations[0]);
-            action.play();
-        } else {
-            mixer = null;
-        }
-
-        if (guiMorphsFolder) {
-            guiMorphsFolder.children.forEach((child) => child.destroy());
-            guiMorphsFolder.hide();
-        }
-
+    if (object) {
         object.traverse(function (child) {
-            if (child.isMesh) {
-                child.castShadow = true;
-                child.receiveShadow = true;
-                if (child.morphTargetDictionary) {
-                    guiMorphsFolder.show();
-                    const meshFolder = guiMorphsFolder.addFolder(child.name || child.uuid);
-                    Object.keys(child.morphTargetDictionary).forEach((key) => {
-                        meshFolder.add(child.morphTargetInfluences, child.morphTargetDictionary[key], 0, 1, 0.01);
-                    });
+            if (child.material) {
+                if (child.material.dispose) {
+                    child.material.dispose();
+                }
+                if (child.material.map && child.material.map.dispose) {
+                    child.material.map.dispose();
                 }
             }
+            if (child.geometry && child.geometry.dispose) {
+                child.geometry.dispose();
+            }
         });
+        scene.remove(object);
+    }
 
-        scene.add(object);
-    }, undefined, function (error) {
-        console.error('Error loading asset:', asset, error);
+    object = group;
+
+    if (object.animations && object.animations.length) {
+        mixer = new THREE.AnimationMixer(object);
+        const action = mixer.clipAction(object.animations[0]);
+        action.play();
+    } else {
+        mixer = null;
+    }
+
+    if (guiMorphsFolder) {
+        guiMorphsFolder.children.forEach((child) => child.destroy());
+        guiMorphsFolder.hide();
+    }
+
+    object.traverse(function (child) {
+        if (child.isMesh) {
+            child.castShadow = true;
+            child.receiveShadow = true;
+            if (child.morphTargetDictionary) {
+                guiMorphsFolder.show();
+                const meshFolder = guiMorphsFolder.addFolder(child.name || child.uuid);
+                Object.keys(child.morphTargetDictionary).forEach((key) => {
+                    meshFolder.add(child.morphTargetInfluences, child.morphTargetDictionary[key], 0, 1, 0.01);
+                });
+            }
+        }
     });
+
+    scene.add(object);
 }
 
 function onWindowResize() {
@@ -217,6 +236,7 @@ function animate() {
         // Punto de mira de la cámara (donde apuntan los ojos del personaje)
         const lookAtPosition = new THREE.Vector3();
         lookAtPosition.copy(object.position).add(lookAtOffset);
+       
         camera.lookAt(lookAtPosition);
     }
 
