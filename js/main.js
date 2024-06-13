@@ -12,7 +12,8 @@ const params = {
 
 const assets = {
     'Idle': null,
-    'Walk': null
+    'Walk': null,
+    'Walk Back': null
 };
 
 const moveSpeed = 100; // Velocidad de movimiento
@@ -66,10 +67,12 @@ function init() {
     loader = new FBXLoader();
     Promise.all([
         preloadAsset('Idle'),
-        preloadAsset('Walk')
+        preloadAsset('Walk'),
+        preloadAsset('Walk Back')  // Agregar precarga para 'Walk Back'
     ]).then(() => {
         loadAsset(params.asset);
     });
+    
 
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setPixelRatio(window.devicePixelRatio);
@@ -105,6 +108,7 @@ function preloadAsset(asset) {
     });
 }
 
+
 function loadAsset(asset) {
     console.log('Loading asset:', asset);
     if (!assets[asset]) {
@@ -132,7 +136,7 @@ function loadAsset(asset) {
     }
 
     object = group;
-
+      
     if (object.animations && object.animations.length) {
         mixer = new THREE.AnimationMixer(object);
         const action = mixer.clipAction(object.animations[0]);
@@ -163,6 +167,8 @@ function loadAsset(asset) {
     scene.add(object);
 }
 
+
+
 function onWindowResize() {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
@@ -181,12 +187,17 @@ function onKeyDown(event) {
             break;
         case 'KeyS':
             moveDirection.backward = true;
+            if (params.asset !== 'Walk Back') {
+                params.asset = 'Walk Back';
+                console.log('Switching to Walk Back asset');
+                loadAsset(params.asset);
+            }
             break;
         case 'KeyA':
-            moveDirection.right = true;
+            moveDirection.left = true;
             break;
         case 'KeyD':
-            moveDirection.left = true;
+            moveDirection.right = true;
             break;
     }
 }
@@ -203,28 +214,46 @@ function onKeyUp(event) {
             break;
         case 'KeyS':
             moveDirection.backward = false;
+            if (params.asset !== 'Idle') {
+                params.asset = 'Idle';
+                console.log('Switching to Idle asset');
+                loadAsset(params.asset);
+            }
             break;
         case 'KeyA':
-            moveDirection.right = false;
+            moveDirection.left = false;
             break;
         case 'KeyD':
-            moveDirection.left = false;
+            moveDirection.right = false;
             break;
     }
 }
+
 
 function animate() {
     const delta = clock.getDelta();
     if (mixer) mixer.update(delta);
 
-    // Mover el personaje
+    // Verificar si object está definido
     if (object) {
         // Guardar la posición actual antes de aplicar el movimiento
         const originalPosition = object.position.clone();
 
-        if (moveDirection.forward) object.position.z -= moveSpeed * delta;  // Movimiento hacia adelante (negativo en Z)
+        // Mover el personaje
+        if (moveDirection.forward) {
+            object.translateZ(-moveSpeed * delta);  // Movimiento hacia adelante (negativo en Z)
+        }
+        if (moveDirection.backward) {
+            object.translateZ(moveSpeed * delta);   // Movimiento hacia atrás (positivo en Z)
+        }
+        if (moveDirection.left) {
+            object.translateX(-moveSpeed * delta);  // Movimiento hacia la izquierda
+        }
+        if (moveDirection.right) {
+            object.translateX(moveSpeed * delta);   // Movimiento hacia la derecha
+        }
 
-        // Actualizar la posición de la cámara en base a la nueva posición del objeto
+        // Ajustar la posición de la cámara en base a la nueva posición del objeto
         const cameraOffset = new THREE.Vector3(-70, 130, -300);  // Ajustar según el personaje
         const lookAtOffset = new THREE.Vector3(0, 100, 100);    // Punto de mira del personaje
 
@@ -236,12 +265,13 @@ function animate() {
         lookAtPosition.copy(object.position).add(lookAtOffset);
         camera.lookAt(lookAtPosition);
 
-        // Verificar si se ha movido el objeto y actualizar su posición según el movimiento
+        // Restaurar la posición original del objeto si ha cambiado
         if (!originalPosition.equals(object.position)) {
-            object.position.copy(originalPosition);  // Restaurar la posición original del objeto
+            object.position.copy(originalPosition);
         }
     }
 
     renderer.render(scene, camera);
     stats.update();
 }
+
