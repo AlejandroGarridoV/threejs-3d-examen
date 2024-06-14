@@ -62,7 +62,7 @@ function init() {
 
     flickerLight();
 
-    const groundMesh = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), new THREE.MeshPhongMaterial({ color: 0x000000, depthWrite: false }));
+    const groundMesh = new THREE.Mesh(new THREE.PlaneGeometry(20000, 20000), new THREE.MeshPhongMaterial({ color: 0x000000, depthWrite: false }));
     groundMesh.rotation.x = - Math.PI / 2;
     groundMesh.receiveShadow = true;
     scene.add(groundMesh);
@@ -313,10 +313,10 @@ function animate() {
         }
 
         // Limitar el movimiento del personaje dentro del mundo (opcional)
-        const maxX = 1000; // Límite máximo en el eje X
-        const minX = -1000; // Límite mínimo en el eje X
-        const maxZ = 1000; // Límite máximo en el eje Z
-        const minZ = -1000; // Límite mínimo en el eje Z
+        const maxX = 20000; // Límite máximo en el eje X
+        const minX = -20000; // Límite mínimo en el eje X
+        const maxZ = 20000; // Límite máximo en el eje Z
+        const minZ = -20000; // Límite mínimo en el eje Z
 
         // Aplicar los límites
         characterPosition.x = THREE.MathUtils.clamp(characterPosition.x, minX, maxX);
