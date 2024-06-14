@@ -21,7 +21,7 @@ const assets = {
     'Throw': null
 };
 
-const moveSpeed = 100; // Velocidad de movimiento
+const moveSpeed = 200; // Velocidad de movimiento
 const moveDirection = { forward: false, backward: false, left: false, right: false, jump: false };
 
 // Coordenadas únicas del personaje
@@ -221,19 +221,19 @@ function stopMainMovement() {
 
 function onKeyDown(event) {
     switch (event.code) {
-        case 'KeyW':
-            moveDirection.backward = true;
-            if (params.asset !== 'Walk') {
-                params.asset = 'Walk';
-                console.log('Switching to Walk asset');
-                loadAsset(params.asset);
-            }
-            break;
         case 'KeyS':
             moveDirection.forward = true;
             if (params.asset !== 'Walk Back') {
                 params.asset = 'Walk Back';
                 console.log('Switching to Walk Back asset');
+                loadAsset(params.asset);
+            }
+            break;
+        case 'KeyW':
+            moveDirection.backward = true;
+            if (params.asset !== 'Walk') {
+                params.asset = 'Walk';
+                console.log('Switching to Walk asset');
                 loadAsset(params.asset);
             }
             break;
@@ -266,11 +266,11 @@ function onKeyDown(event) {
 
 function onKeyUp(event) {
     switch (event.code) {
-        case 'KeyW':
-            moveDirection.backward = false;
-            break;
         case 'KeyS':
             moveDirection.forward = false;
+            break;
+        case 'KeyW':
+            moveDirection.backward = false;
             break;
         case 'KeyA':
             moveDirection.right = false;
@@ -292,47 +292,52 @@ function onKeyUp(event) {
 }
 
 
+
 function animate() {
     const delta = clock.getDelta();
     if (mixer) mixer.update(delta);
 
     if (object) {
-                // Actualizar la posición del personaje (continuación)
-                if (moveDirection.left) {
-                    characterPosition.x -= moveSpeed * delta;
-                }
-                if (moveDirection.right) {
-                    characterPosition.x += moveSpeed * delta;
-                }
-        
-                // Limitar el movimiento del personaje dentro del mundo (opcional)
-                // Aquí se asume que el mundo tiene límites específicos en X y Z
-                const maxX = 1000; // Límite máximo en el eje X
-                const minX = -1000; // Límite mínimo en el eje X
-                const maxZ = 1000; // Límite máximo en el eje Z
-                const minZ = -1000; // Límite mínimo en el eje Z
-        
-                // Aplicar los límites
-                characterPosition.x = THREE.MathUtils.clamp(characterPosition.x, minX, maxX);
-                characterPosition.z = THREE.MathUtils.clamp(characterPosition.z, minZ, maxZ);
-        
-                // Aplicar la posición al objeto en la escena
-                object.position.set(characterPosition.x, 0, characterPosition.z);
-        
-                // Ajustar la posición de la cámara respecto al personaje
-                const cameraOffset = new THREE.Vector3(-70, 130, -300);  // Ajustar según el personaje
-                const lookAtOffset = new THREE.Vector3(0, 100, 100);    // Punto de mira del personaje
-        
-                const position = new THREE.Vector3();
-                position.copy(object.position).add(cameraOffset);
-                camera.position.copy(position);
-        
-                const lookAtPosition = new THREE.Vector3();
-                lookAtPosition.copy(object.position).add(lookAtOffset);
-                camera.lookAt(lookAtPosition);
-            }
-        
-            renderer.render(scene, camera);
-            stats.update();
+        // Actualizar la posición del personaje
+        if (moveDirection.left) {
+            characterPosition.x -= moveSpeed * delta;
         }
-        
+        if (moveDirection.right) {
+            characterPosition.x += moveSpeed * delta;
+        }
+        if (moveDirection.forward) {
+            characterPosition.z -= moveSpeed * delta;
+        }
+        if (moveDirection.backward) {
+            characterPosition.z += moveSpeed * delta;
+        }
+
+        // Limitar el movimiento del personaje dentro del mundo (opcional)
+        const maxX = 1000; // Límite máximo en el eje X
+        const minX = -1000; // Límite mínimo en el eje X
+        const maxZ = 1000; // Límite máximo en el eje Z
+        const minZ = -1000; // Límite mínimo en el eje Z
+
+        // Aplicar los límites
+        characterPosition.x = THREE.MathUtils.clamp(characterPosition.x, minX, maxX);
+        characterPosition.z = THREE.MathUtils.clamp(characterPosition.z, minZ, maxZ);
+
+        // Aplicar la posición al objeto en la escena
+        object.position.set(characterPosition.x, 0, characterPosition.z);
+
+        // Ajustar la posición de la cámara respecto al personaje
+        const cameraOffset = new THREE.Vector3(-70, 130, -300);  // Ajustar según el personaje
+        const lookAtOffset = new THREE.Vector3(0, 100, 100);    // Punto de mira del personaje
+
+        const position = new THREE.Vector3();
+        position.copy(object.position).add(cameraOffset);
+        camera.position.copy(position);
+
+        const lookAtPosition = new THREE.Vector3();
+        lookAtPosition.copy(object.position).add(lookAtOffset);
+        camera.lookAt(lookAtPosition);
+    }
+
+    renderer.render(scene, camera);
+    stats.update();
+}
