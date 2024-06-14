@@ -18,11 +18,14 @@ const assets = {
     'Right Walk': null,
     'Jump': null,
     'kick': null,
-    'Throw': null  // Agregar animación "Throw"
+    'Throw': null
 };
 
 const moveSpeed = 100; // Velocidad de movimiento
 const moveDirection = { forward: false, backward: false, left: false, right: false, jump: false };
+
+// Coordenadas únicas del personaje
+let characterPosition = { x: 0, z: 0 };
 
 init();
 
@@ -34,10 +37,10 @@ function init() {
     camera.position.set(0, 150, 300);
 
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x000000);  // Color de fondo negro
-    scene.fog = new THREE.Fog(0x000000, 200, 1000);  // Fog de color negro
+    scene.background = new THREE.Color(0x000000);
+    scene.fog = new THREE.Fog(0x000000, 200, 1000);
 
-    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.05);  // Desactivar luz ambiental
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.05);
     hemiLight.position.set(0, 200, 0);
     scene.add(hemiLight);
 
@@ -59,15 +62,15 @@ function init() {
 
     flickerLight();
 
-    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), new THREE.MeshPhongMaterial({ color: 0x000000, depthWrite: false }));  // Suelo de color negro
-    mesh.rotation.x = - Math.PI / 2;
-    mesh.receiveShadow = true;
-    scene.add(mesh);
+    const groundMesh = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), new THREE.MeshPhongMaterial({ color: 0x000000, depthWrite: false }));
+    groundMesh.rotation.x = - Math.PI / 2;
+    groundMesh.receiveShadow = true;
+    scene.add(groundMesh);
 
-    const grid = new THREE.GridHelper(2000, 20, 0xffffff, 0xffffff);  // Grid de color blanco
-    grid.material.opacity = 0.2;
-    grid.material.transparent = true;
-    scene.add(grid);
+    const gridHelper = new THREE.GridHelper(2000, 20, 0xffffff, 0xffffff);
+    gridHelper.material.opacity = 0.2;
+    gridHelper.material.transparent = true;
+    scene.add(gridHelper);
 
     loader = new FBXLoader();
     Promise.all([
@@ -78,7 +81,7 @@ function init() {
         preloadAsset('Right Walk'),
         preloadAsset('Jump'),
         preloadAsset('kick'),
-        preloadAsset('Throw') // Pre-cargar animación "Throw"
+        preloadAsset('Throw')
     ]).then(() => {
         loadAsset(params.asset);
     });
@@ -104,10 +107,8 @@ function init() {
 
     guiMorphsFolder = gui.addFolder('Morphs').hide();
 
-    // Agregar listener para la tecla Ctrl izquierda
     document.addEventListener('keydown', onCtrlKeyDown);
 
-    // Agregar listener para clic izquierdo en el área de renderizado
     renderer.domElement.addEventListener('mousedown', onMouseDown);
 }
 
@@ -187,10 +188,41 @@ function onWindowResize() {
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
+function onCtrlKeyDown(event) {
+    if (event.code === 'ControlLeft') {
+        params.asset = 'kick';
+        console.log('Switching to kick asset');
+        loadAsset(params.asset);
+        
+        // Detener el movimiento principal
+        stopMainMovement();
+    }
+}
+
+function onMouseDown(event) {
+    if (event.button === 1) { // Botón derecho del ratón
+        params.asset = 'Throw';
+        console.log('Switching to Throw asset');
+        loadAsset(params.asset);
+        
+        // Detener el movimiento principal
+        stopMainMovement();
+    }
+}
+
+function stopMainMovement() {
+    // Detener el movimiento principal si se está ejecutando
+    if (params.asset !== 'Idle' && params.asset !== 'kick' && params.asset !== 'Throw') {
+        params.asset = 'Idle';
+        console.log('Switching to Idle asset');
+        loadAsset(params.asset);
+    }
+}
+
 function onKeyDown(event) {
     switch (event.code) {
         case 'KeyW':
-            moveDirection.forward = true;
+            moveDirection.backward = true;
             if (params.asset !== 'Walk') {
                 params.asset = 'Walk';
                 console.log('Switching to Walk asset');
@@ -198,7 +230,7 @@ function onKeyDown(event) {
             }
             break;
         case 'KeyS':
-            moveDirection.backward = true;
+            moveDirection.forward = true;
             if (params.asset !== 'Walk Back') {
                 params.asset = 'Walk Back';
                 console.log('Switching to Walk Back asset');
@@ -206,7 +238,7 @@ function onKeyDown(event) {
             }
             break;
         case 'KeyA':
-            moveDirection.left = true;
+            moveDirection.right = true;
             if (params.asset !== 'Left Walk') {
                 params.asset = 'Left Walk';
                 console.log('Switching to Left Walk asset');
@@ -214,7 +246,7 @@ function onKeyDown(event) {
             }
             break;
         case 'KeyD':
-            moveDirection.right = true;
+            moveDirection.left = true;
             if (params.asset !== 'Right Walk') {
                 params.asset = 'Right Walk';
                 console.log('Switching to Right Walk asset');
@@ -235,102 +267,72 @@ function onKeyDown(event) {
 function onKeyUp(event) {
     switch (event.code) {
         case 'KeyW':
-            moveDirection.forward = false;
-            if (params.asset !== 'Idle') {
-                params.asset = 'Idle';
-                console.log('Switching to Idle asset');
-                loadAsset(params.asset);
-            }
+            moveDirection.backward = false;
             break;
         case 'KeyS':
-            moveDirection.backward = false;
-            if (params.asset !== 'Idle') {
-                params.asset = 'Idle';
-                console.log('Switching to Idle asset');
-                loadAsset(params.asset);
-            }
+            moveDirection.forward = false;
             break;
         case 'KeyA':
-            moveDirection.left = false;
-            if (params.asset !== 'Idle') {
-                params.asset = 'Idle';
-                console.log('Switching to Idle asset');
-                loadAsset(params.asset);
-            }
+            moveDirection.right = false;
             break;
         case 'KeyD':
-            moveDirection.right = false;
-            if (params.asset !== 'Idle') {
-                params.asset = 'Idle';
-                console.log('Switching to Idle asset');
-                loadAsset(params.asset);
-            }
+            moveDirection.left = false;
             break;
         case 'Space':
             moveDirection.jump = false;
-            if (params.asset !== 'Idle') {
-                params.asset = 'Idle';
-                console.log('Switching to Idle asset');
-                loadAsset(params.asset);
-            }
             break;
     }
+    if (!moveDirection.forward && !moveDirection.backward && !moveDirection.left && !moveDirection.right && !moveDirection.jump) {
+        if (params.asset !== 'Idle' && params.asset !== 'kick' && params.asset !== 'Throw') {
+            params.asset = 'Idle';
+            console.log('Switching to Idle asset');
+            loadAsset(params.asset);
+        }
+    }
 }
+
 
 function animate() {
     const delta = clock.getDelta();
     if (mixer) mixer.update(delta);
 
     if (object) {
-        const originalPosition = object.position.clone();
-
-        if (moveDirection.forward) {
-            object.translateZ(-moveSpeed * delta);
+                // Actualizar la posición del personaje (continuación)
+                if (moveDirection.left) {
+                    characterPosition.x -= moveSpeed * delta;
+                }
+                if (moveDirection.right) {
+                    characterPosition.x += moveSpeed * delta;
+                }
+        
+                // Limitar el movimiento del personaje dentro del mundo (opcional)
+                // Aquí se asume que el mundo tiene límites específicos en X y Z
+                const maxX = 1000; // Límite máximo en el eje X
+                const minX = -1000; // Límite mínimo en el eje X
+                const maxZ = 1000; // Límite máximo en el eje Z
+                const minZ = -1000; // Límite mínimo en el eje Z
+        
+                // Aplicar los límites
+                characterPosition.x = THREE.MathUtils.clamp(characterPosition.x, minX, maxX);
+                characterPosition.z = THREE.MathUtils.clamp(characterPosition.z, minZ, maxZ);
+        
+                // Aplicar la posición al objeto en la escena
+                object.position.set(characterPosition.x, 0, characterPosition.z);
+        
+                // Ajustar la posición de la cámara respecto al personaje
+                const cameraOffset = new THREE.Vector3(-70, 130, -300);  // Ajustar según el personaje
+                const lookAtOffset = new THREE.Vector3(0, 100, 100);    // Punto de mira del personaje
+        
+                const position = new THREE.Vector3();
+                position.copy(object.position).add(cameraOffset);
+                camera.position.copy(position);
+        
+                const lookAtPosition = new THREE.Vector3();
+                lookAtPosition.copy(object.position).add(lookAtOffset);
+                camera.lookAt(lookAtPosition);
+            }
+        
+            renderer.render(scene, camera);
+            stats.update();
         }
-        if (moveDirection.backward) {
-            object.translateZ(moveSpeed * delta);
-        }
-        if (moveDirection.left) {
-            object.translateX(-moveSpeed * delta);
-        }
-        if (moveDirection.right) {
-            object.translateX(moveSpeed * delta);
-        }
-
-        const cameraOffset = new THREE.Vector3(-70, 130, -300);  // Ajustar según el personaje
-        const lookAtOffset = new THREE.Vector3(0, 100, 100);    // Punto de mira del personaje
-
-        const position = new THREE.Vector3();
-        position.copy(object.position).add(cameraOffset);
-        camera.position.copy(position);
-
-        const lookAtPosition = new THREE.Vector3();
-        lookAtPosition.copy(object.position).add(lookAtOffset);
-        camera.lookAt(lookAtPosition);
-
-        if (!originalPosition.equals(object.position)) {
-            object.position.copy(originalPosition);
-        }
-    }
-
-    renderer.render(scene, camera);
-    stats.update();
-}
-
-function onCtrlKeyDown(event) {
-    if (event.code === 'ControlLeft') {
-        params.asset = 'kick';
-        console.log('Switching to kick asset');
-        loadAsset(params.asset);
-    }
-}
-
-function onMouseDown(event) {
-    if (event.button === 1) { // 0 representa el botón izquierdo del ratón
-        params.asset = 'Throw';
-        console.log('Switching to Throw asset');
-        loadAsset(params.asset);
-    }
-}
-
-
+        
