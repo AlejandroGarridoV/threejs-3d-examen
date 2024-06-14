@@ -14,9 +14,11 @@ const assets = {
     'Idle': null,
     'Walk': null,
     'Walk Back': null,
-    'Left Walk': null,  // Agregar animación "Left Walk"
-    'Right Walk': null, // Agregar animación "Right Walk"
-    'Jump': null        // Agregar animación "Jump"
+    'Left Walk': null,
+    'Right Walk': null,
+    'Jump': null,
+    'kick': null,
+    'Throw': null  // Agregar animación "Throw"
 };
 
 const moveSpeed = 100; // Velocidad de movimiento
@@ -71,14 +73,15 @@ function init() {
     Promise.all([
         preloadAsset('Idle'),
         preloadAsset('Walk'),
-        preloadAsset('Walk Back'),  // Agregar precarga para 'Walk Back'
-        preloadAsset('Left Walk'),  // Pre-cargar animación "Left Walk"
-        preloadAsset('Right Walk'), // Pre-cargar animación "Right Walk"
-        preloadAsset('Jump')        // Pre-cargar animación "Jump"
+        preloadAsset('Walk Back'),
+        preloadAsset('Left Walk'),
+        preloadAsset('Right Walk'),
+        preloadAsset('Jump'),
+        preloadAsset('kick'),
+        preloadAsset('Throw') // Pre-cargar animación "Throw"
     ]).then(() => {
         loadAsset(params.asset);
     });
-    
 
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setPixelRatio(window.devicePixelRatio);
@@ -100,6 +103,12 @@ function init() {
     });
 
     guiMorphsFolder = gui.addFolder('Morphs').hide();
+
+    // Agregar listener para la tecla Ctrl izquierda
+    document.addEventListener('keydown', onCtrlKeyDown);
+
+    // Agregar listener para clic izquierdo en el área de renderizado
+    renderer.domElement.addEventListener('mousedown', onMouseDown);
 }
 
 function preloadAsset(asset) {
@@ -141,7 +150,7 @@ function loadAsset(asset) {
     }
 
     object = group;
-      
+
     if (object.animations && object.animations.length) {
         mixer = new THREE.AnimationMixer(object);
         const action = mixer.clipAction(object.animations[0]);
@@ -272,38 +281,33 @@ function animate() {
     const delta = clock.getDelta();
     if (mixer) mixer.update(delta);
 
-    // Verificar si object está definido
     if (object) {
-        // Guardar la posición actual antes de aplicar el movimiento
         const originalPosition = object.position.clone();
 
-        // Mover el personaje
         if (moveDirection.forward) {
-            object.translateZ(-moveSpeed * delta);  // Movimiento hacia adelante (negativo en Z)
+            object.translateZ(-moveSpeed * delta);
         }
         if (moveDirection.backward) {
-            object.translateZ(moveSpeed * delta);   // Movimiento hacia atrás (positivo en Z)
+            object.translateZ(moveSpeed * delta);
         }
         if (moveDirection.left) {
-            object.translateX(-moveSpeed * delta);  // Movimiento hacia la izquierda
+            object.translateX(-moveSpeed * delta);
         }
         if (moveDirection.right) {
-            object.translateX(moveSpeed * delta);   // Movimiento hacia la derecha
+            object.translateX(moveSpeed * delta);
         }
 
-        // Ajustar la posición de la cámara en base a la nueva posición del objeto
         const cameraOffset = new THREE.Vector3(-70, 130, -300);  // Ajustar según el personaje
         const lookAtOffset = new THREE.Vector3(0, 100, 100);    // Punto de mira del personaje
 
         const position = new THREE.Vector3();
         position.copy(object.position).add(cameraOffset);
-        camera.position.copy(position);       
+        camera.position.copy(position);
 
         const lookAtPosition = new THREE.Vector3();
         lookAtPosition.copy(object.position).add(lookAtOffset);
         camera.lookAt(lookAtPosition);
 
-        // Restaurar la posición original del objeto si ha cambiado
         if (!originalPosition.equals(object.position)) {
             object.position.copy(originalPosition);
         }
@@ -312,3 +316,21 @@ function animate() {
     renderer.render(scene, camera);
     stats.update();
 }
+
+function onCtrlKeyDown(event) {
+    if (event.code === 'ControlLeft') {
+        params.asset = 'kick';
+        console.log('Switching to kick asset');
+        loadAsset(params.asset);
+    }
+}
+
+function onMouseDown(event) {
+    if (event.button === 1) { // 0 representa el botón izquierdo del ratón
+        params.asset = 'Throw';
+        console.log('Switching to Throw asset');
+        loadAsset(params.asset);
+    }
+}
+
+
