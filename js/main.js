@@ -13,7 +13,9 @@ const params = {
 const assets = {
     'Idle': null,
     'Walk': null,
-    'Walk Back': null
+    'Walk Back': null,
+    'Left Walk': null,  // Agregar animación "Left Walk"
+    'Right Walk': null  // Agregar animación "Right Walk"
 };
 
 const moveSpeed = 100; // Velocidad de movimiento
@@ -68,7 +70,9 @@ function init() {
     Promise.all([
         preloadAsset('Idle'),
         preloadAsset('Walk'),
-        preloadAsset('Walk Back')  // Agregar precarga para 'Walk Back'
+        preloadAsset('Walk Back'),  // Agregar precarga para 'Walk Back'
+        preloadAsset('Left Walk'),  // Pre-cargar animación "Left Walk"
+        preloadAsset('Right Walk')  // Pre-cargar animación "Right Walk"
     ]).then(() => {
         loadAsset(params.asset);
     });
@@ -107,7 +111,6 @@ function preloadAsset(asset) {
         });
     });
 }
-
 
 function loadAsset(asset) {
     console.log('Loading asset:', asset);
@@ -167,8 +170,6 @@ function loadAsset(asset) {
     scene.add(object);
 }
 
-
-
 function onWindowResize() {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
@@ -195,9 +196,19 @@ function onKeyDown(event) {
             break;
         case 'KeyA':
             moveDirection.left = true;
+            if (params.asset !== 'Left Walk') {
+                params.asset = 'Left Walk';
+                console.log('Switching to Left Walk asset');
+                loadAsset(params.asset);
+            }
             break;
         case 'KeyD':
             moveDirection.right = true;
+            if (params.asset !== 'Right Walk') {
+                params.asset = 'Right Walk';
+                console.log('Switching to Right Walk asset');
+                loadAsset(params.asset);
+            }
             break;
     }
 }
@@ -222,13 +233,22 @@ function onKeyUp(event) {
             break;
         case 'KeyA':
             moveDirection.left = false;
+            if (params.asset !== 'Idle') {
+                params.asset = 'Idle';
+                console.log('Switching to Idle asset');
+                loadAsset(params.asset);
+            }
             break;
         case 'KeyD':
             moveDirection.right = false;
+            if (params.asset !== 'Idle') {
+                params.asset = 'Idle';
+                console.log('Switching to Idle asset');
+                loadAsset(params.asset);
+            }
             break;
     }
 }
-
 
 function animate() {
     const delta = clock.getDelta();
@@ -274,4 +294,3 @@ function animate() {
     renderer.render(scene, camera);
     stats.update();
 }
-
