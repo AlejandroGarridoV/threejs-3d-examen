@@ -15,11 +15,12 @@ const assets = {
     'Walk': null,
     'Walk Back': null,
     'Left Walk': null,  // Agregar animación "Left Walk"
-    'Right Walk': null  // Agregar animación "Right Walk"
+    'Right Walk': null, // Agregar animación "Right Walk"
+    'Jump': null        // Agregar animación "Jump"
 };
 
 const moveSpeed = 100; // Velocidad de movimiento
-const moveDirection = { forward: false, backward: false, left: false, right: false };
+const moveDirection = { forward: false, backward: false, left: false, right: false, jump: false };
 
 init();
 
@@ -72,7 +73,8 @@ function init() {
         preloadAsset('Walk'),
         preloadAsset('Walk Back'),  // Agregar precarga para 'Walk Back'
         preloadAsset('Left Walk'),  // Pre-cargar animación "Left Walk"
-        preloadAsset('Right Walk')  // Pre-cargar animación "Right Walk"
+        preloadAsset('Right Walk'), // Pre-cargar animación "Right Walk"
+        preloadAsset('Jump')        // Pre-cargar animación "Jump"
     ]).then(() => {
         loadAsset(params.asset);
     });
@@ -210,6 +212,14 @@ function onKeyDown(event) {
                 loadAsset(params.asset);
             }
             break;
+        case 'Space':
+            moveDirection.jump = true;
+            if (params.asset !== 'Jump') {
+                params.asset = 'Jump';
+                console.log('Switching to Jump asset');
+                loadAsset(params.asset);
+            }
+            break;
     }
 }
 
@@ -241,6 +251,14 @@ function onKeyUp(event) {
             break;
         case 'KeyD':
             moveDirection.right = false;
+            if (params.asset !== 'Idle') {
+                params.asset = 'Idle';
+                console.log('Switching to Idle asset');
+                loadAsset(params.asset);
+            }
+            break;
+        case 'Space':
+            moveDirection.jump = false;
             if (params.asset !== 'Idle') {
                 params.asset = 'Idle';
                 console.log('Switching to Idle asset');
@@ -279,7 +297,7 @@ function animate() {
 
         const position = new THREE.Vector3();
         position.copy(object.position).add(cameraOffset);
-        camera.position.copy(position);
+        camera.position.copy(position);       
 
         const lookAtPosition = new THREE.Vector3();
         lookAtPosition.copy(object.position).add(lookAtOffset);
