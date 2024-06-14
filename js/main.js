@@ -27,6 +27,8 @@ const moveDirection = { forward: false, backward: false, left: false, right: fal
 // Coordenadas únicas del personaje
 let characterPosition = { x: 0, z: 0 };
 
+let cube; // Variable para el cubo
+
 init();
 
 function init() {
@@ -44,7 +46,7 @@ function init() {
     hemiLight.position.set(0, 200, 0);
     scene.add(hemiLight);
 
-    const dirLight = new THREE.DirectionalLight(0xffffff, 10);
+    const dirLight = new THREE.DirectionalLight(0xfff2cf, 10);
     dirLight.position.set(0, 200, 100);
     dirLight.castShadow = true;
     dirLight.shadow.camera.top = 180;
@@ -85,6 +87,15 @@ function init() {
     ]).then(() => {
         loadAsset(params.asset);
     });
+
+    // Crear y añadir el cubo
+    const cubeGeometry = new THREE.BoxGeometry(50, 50, 50);
+    const cubeMaterial = new THREE.MeshPhongMaterial({ color: 0x00ff00 });
+    cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+    cube.position.set(100, 25, 100); // Posición inicial del cubo
+    cube.castShadow = true;
+    cube.receiveShadow = true;
+    scene.add(cube);
 
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setPixelRatio(window.devicePixelRatio);
@@ -291,8 +302,6 @@ function onKeyUp(event) {
     }
 }
 
-
-
 function animate() {
     const delta = clock.getDelta();
     if (mixer) mixer.update(delta);
@@ -336,6 +345,16 @@ function animate() {
         const lookAtPosition = new THREE.Vector3();
         lookAtPosition.copy(object.position).add(lookAtOffset);
         camera.lookAt(lookAtPosition);
+
+        // Detectar colisión con el cubo
+        if (object.position.distanceTo(cube.position) < 50) {
+            console.log('¡Colisión con el cubo!');
+            // Acción de interacción con el cubo (por ejemplo, cambiar el color del cubo)
+            cube.material.color.set(0xff0000);
+        } else {
+            // Restaurar el color original del cubo cuando no hay colisión
+            cube.material.color.set(0x00ff00);
+        }
     }
 
     renderer.render(scene, camera);
