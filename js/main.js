@@ -2,10 +2,11 @@ import * as THREE from 'three';
 import Stats from 'three/addons/libs/stats.module.js';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
+import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 
-let camera, scene, renderer, stats, object, loader, guiMorphsFolder;
+let camera, scene, renderer, stats, object, loader, guiMorphsFolder, controls;
 const clock = new THREE.Clock();
-let mixer;
+let mixer, currentAction, actions = {};
 const params = {
     asset: 'Idle'
 };
@@ -112,6 +113,21 @@ function init() {
     renderer.shadowMap.enabled = true;
     container.appendChild(renderer.domElement);
 
+    // PointerLockControls
+    controls = new PointerLockControls(camera, document.body);
+
+    document.getElementById('instructions').addEventListener('click', function () {
+        controls.lock();
+    });
+
+    controls.addEventListener('lock', function () {
+        document.getElementById('blocker').style.display = 'none';
+    });
+
+    controls.addEventListener('unlock', function () {
+        document.getElementById('blocker').style.display = 'block';
+    });
+
     window.addEventListener('resize', onWindowResize);
     document.addEventListener('keydown', onKeyDown);
     document.addEventListener('keyup', onKeyUp);
@@ -173,8 +189,9 @@ function loadAsset(asset) {
 
     if (object.animations && object.animations.length) {
         mixer = new THREE.AnimationMixer(object);
-        const action = mixer.clipAction(object.animations[0]);
-        action.play();
+        currentAction = mixer.clipAction(object.animations[0]);
+        currentAction.play();
+        actions[asset] = currentAction;
     } else {
         mixer = null;
     }
@@ -199,6 +216,19 @@ function loadAsset(asset) {
     });
 
     scene.add(object);
+
+    // Asegurar que el personaje esté al nivel del suelo al cargar el asset
+    if (object) {
+        object.position.y = 25; // Ajusta la altura según la geometría del personaje
+    }
+}
+
+function switchAnimation(newAction) {
+    if (currentAction && newAction !== currentAction) {
+        currentAction.fadeOut(0.2);
+    }
+    newAction.reset().fadeIn(0.2).play();
+    currentAction = newAction;
 }
 
 function onWindowResize() {
@@ -211,8 +241,9 @@ function onCtrlKeyDown(event) {
     if (event.code === 'ControlLeft') {
         params.asset = 'kick';
         console.log('Switching to kick asset');
-        loadAsset(params.asset);
-        
+        if (!actions['kick']) loadAsset(params.asset);
+        else switchAnimation(actions['kick']);
+
         // Detener el movimiento principal
         stopMainMovement();
     }
@@ -222,8 +253,9 @@ function onMouseDown(event) {
     if (event.button === 1) { // Botón derecho del ratón
         params.asset = 'Throw';
         console.log('Switching to Throw asset');
-        loadAsset(params.asset);
-        
+        if (!actions['Throw']) loadAsset(params.asset);
+        else switchAnimation(actions['Throw']);
+
         // Detener el movimiento principal
         stopMainMovement();
     }
@@ -233,146 +265,145 @@ function stopMainMovement() {
     // Detener el movimiento principal si se está ejecutando
     if (params.asset !== 'Idle' && params.asset !== 'kick' && params.asset !== 'Throw') {
         params.asset = 'Idle';
-        console.log('Switching to Idle asset');
-        loadAsset(params.asset);
+        if (!actions['Idle']) loadAsset(params.asset);
+        else switchAnimation(actions['Idle']);
     }
 }
 
 function onKeyDown(event) {
+    let actionChanged = false;
     switch (event.code) {
-        case 'KeyS':
-            moveDirection.forward = true;
-            if (params.asset !== 'Walk Back') {
-                params.asset = 'Walk Back';
-                console.log('Switching to Walk Back asset');
-                loadAsset(params.asset);
-            }
-            break;
+        case 'ArrowUp':
         case 'KeyW':
-            moveDirection.backward = true;
+            moveDirection.forward = true;
             if (params.asset !== 'Walk') {
                 params.asset = 'Walk';
-                console.log('Switching to Walk asset');
-                loadAsset(params.asset);
+                actionChanged = true;
             }
             break;
+
+        case 'ArrowLeft':
         case 'KeyA':
-            moveDirection.right = true;
+            moveDirection.left = true;
             if (params.asset !== 'Left Walk') {
                 params.asset = 'Left Walk';
-                console.log('Switching to Left Walk asset');
-                loadAsset(params.asset);
+                actionChanged = true;
             }
             break;
+
+        case 'ArrowDown':
+        case 'KeyS':
+            moveDirection.backward = true;
+            if (params.asset !== 'Walk Back') {
+                params.asset = 'Walk Back';
+                actionChanged = true;
+            }
+            break;
+
+        case 'ArrowRight':
         case 'KeyD':
-            moveDirection.left = true;
+            moveDirection.right = true;
             if (params.asset !== 'Right Walk') {
                 params.asset = 'Right Walk';
-                console.log('Switching to Right Walk asset');
-                loadAsset(params.asset);
+                actionChanged = true;
             }
             break;
+
         case 'Space':
             moveDirection.jump = true;
             if (params.asset !== 'Jump') {
                 params.asset = 'Jump';
-                console.log('Switching to Jump asset');
-                loadAsset(params.asset);
+                actionChanged = true;
             }
             break;
+    }
+
+    if (actionChanged) {
+        if (!actions[params.asset]) loadAsset(params.asset);
+        else switchAnimation(actions[params.asset]);
     }
 }
 
 function onKeyUp(event) {
+    let stopMovement = false;
     switch (event.code) {
-        case 'KeyS':
-            moveDirection.forward = false;
-            break;
+        case 'ArrowUp':
         case 'KeyW':
-            moveDirection.backward = false;
+            moveDirection.forward = false;
+            stopMovement = true;
             break;
+
+        case 'ArrowLeft':
         case 'KeyA':
-            moveDirection.right = false;
-            break;
-        case 'KeyD':
             moveDirection.left = false;
+            stopMovement = true;
             break;
+
+        case 'ArrowDown':
+        case 'KeyS':
+            moveDirection.backward = false;
+            stopMovement = true;
+            break;
+
+        case 'ArrowRight':
+        case 'KeyD':
+            moveDirection.right = false;
+            stopMovement = true;
+            break;
+
         case 'Space':
             moveDirection.jump = false;
+            stopMovement = true;
             break;
     }
-    if (!moveDirection.forward && !moveDirection.backward && !moveDirection.left && !moveDirection.right && !moveDirection.jump) {
-        if (params.asset !== 'Idle' && params.asset !== 'kick' && params.asset !== 'Throw') {
-            params.asset = 'Idle';
-            console.log('Switching to Idle asset');
-            loadAsset(params.asset);
-        }
+
+    if (stopMovement && !moveDirection.forward && !moveDirection.backward && !moveDirection.left && !moveDirection.right && !moveDirection.jump) {
+        stopMainMovement();
     }
 }
 
 function animate() {
     const delta = clock.getDelta();
+
     if (mixer) mixer.update(delta);
 
-    if (object) {
-        // Actualizar la posición del personaje
-        if (moveDirection.left) {
-            characterPosition.x -= moveSpeed * delta;
+    // Movimiento de la cámara
+    if (controls.isLocked === true) {
+        const moveDistance = moveSpeed * delta;
+
+        if (moveDirection.forward) controls.moveForward(moveDistance);
+        if (moveDirection.backward) controls.moveForward(-moveDistance);
+        if (moveDirection.left) controls.moveRight(-moveDistance);
+        if (moveDirection.right) controls.moveRight(moveDistance);
+
+        // Actualizar la posición del personaje para que esté ligeramente a la izquierda de la cámara
+        if (object) {
+            const offsetDistance = 250; // Ajusta esta distancia según sea necesario
+            const direction = new THREE.Vector3();
+            camera.getWorldDirection(direction);
+            const leftOffset = new THREE.Vector3().crossVectors(direction, camera.up).normalize().multiplyScalar(-70); // Ajusta 30 para mover el personaje más o menos a la izquierda
+            object.position.copy(camera.position).add(direction.multiplyScalar(offsetDistance)).add(leftOffset);
+            object.position.y = 25; // Asegura que el personaje esté a nivel del suelo
+
+            // Asegurar que el personaje siempre le dé la espalda a la cámara
+            const cameraDirection = new THREE.Vector3();
+            camera.getWorldDirection(cameraDirection);
+            const angle = Math.atan2(cameraDirection.x, cameraDirection.z);
+            object.rotation.y = angle + Math.PI + 160;
         }
-        if (moveDirection.right) {
-            characterPosition.x += moveSpeed * delta;
-        }
-        if (moveDirection.forward) {
-            characterPosition.z -= moveSpeed * delta;
-        }
-        if (moveDirection.backward) {
-            characterPosition.z += moveSpeed * delta;
-        }
 
-        // Limitar el movimiento del personaje dentro del mundo (opcional)
-        const maxX = 20000; // Límite máximo en el eje X
-        const minX = -20000; // Límite mínimo en el eje X
-        const maxZ = 20000; // Límite máximo en el eje Z
-        const minZ = -20000; // Límite mínimo en el eje Z
+        // Actualizar la posición del personaje en el eje x y z
+        characterPosition.x = object.position.x;
+        characterPosition.z = object.position.z;
 
-        // Aplicar los límites
-        characterPosition.x = THREE.MathUtils.clamp(characterPosition.x, minX, maxX);
-        characterPosition.z = THREE.MathUtils.clamp(characterPosition.z, minZ, maxZ);
-
-        // Aplicar la posición al objeto en la escena
-        object.position.set(characterPosition.x, 0, characterPosition.z);
-
-        // Ajustar la posición de la cámara respecto al personaje
-        const cameraOffset = new THREE.Vector3(-70, 130, -300);  // Ajustar según el personaje
-        const lookAtOffset = new THREE.Vector3(0, 100, 100);    // Punto de mira del personaje
-
-        const position = new THREE.Vector3();
-        position.copy(object.position).add(cameraOffset);
-        camera.position.copy(position);
-
-        const lookAtPosition = new THREE.Vector3();
-        lookAtPosition.copy(object.position).add(lookAtOffset);
-        camera.lookAt(lookAtPosition);
-
-        // Detectar colisión con los cubos
+        // Colisión con cubos
         cubes.forEach((cube, index) => {
-            if (object.position.distanceTo(cube.position) < 50) {
-                console.log('¡Colisión con el cubo!');
-                
-                // Eliminar el cubo visualmente
-                scene.remove(cube);
-                cubes.splice(index, 1);  // Eliminar el cubo del array
-
-                // También podrías liberar recursos del cubo si es necesario
-                cube.geometry.dispose();
-                cube.material.dispose();
-
-                // Incrementar el contador de cubos recolectados
-                collectedCubes++;
-                document.getElementById('points-counter').innerText = `Cubos recolectados: ${collectedCubes}`;
-
-                // Otras acciones que desees realizar al colisionar con el cubo
-                // Por ejemplo, cambiar el color del cubo o reproducir un efecto de sonido
+            const distance = Math.sqrt((cube.position.x - characterPosition.x) ** 2 + (cube.position.z - characterPosition.z) ** 2);
+            if (distance < 50) { // Supongamos que 50 es la distancia mínima para recoger un cubo
+                scene.remove(cube); // Elimina el cubo de la escena
+                cubes.splice(index, 1); // Elimina el cubo del array
+                collectedCubes++; // Incrementa el contador de cubos recolectados
+                document.getElementById('points-counter').innerText = `Cubos recolectados: ${collectedCubes}`; // Actualiza el contador en la interfaz
             }
         });
     }
