@@ -3,32 +3,44 @@
 
 <head>
     <title>Examen</title>
-	<style>
-		body { margin: 0; 
-		overflow: hidden; /* Evitar scrollbars */
-	}
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden; /* Evitar scrollbars */
+        }
 
         canvas {
             display: block; /* Asegurar que el canvas ocupe toda la ventana */
         }
-	</style>
+
+        #points-counter {
+            position: absolute;
+            top: 50px; /* Ajustar la distancia desde la parte superior */
+            left: 20px; /* Ajustar la distancia desde la izquierda */
+            color: white; /* Color del texto */
+            background-color: transparent; /* Fondo transparente */
+            padding: 5px; /* Añadir un poco de espacio alrededor del texto */
+            font-family: Arial, sans-serif; /* Fuente del texto */
+            font-size: 18px; /* Tamaño de la fuente */
+        }
+    </style>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
     <link type="text/css" rel="stylesheet" href="css/styles.css">
 </head>
 
 <body>
+    <div id="points-counter">Cubos recolectados: 0</div> <!-- Div para mostrar el contador de puntos -->
     <script type="importmap">
-			{
-				"imports": {
-					"three": "./build/three.module.js",
-					"three/addons/": "./jsm/"
-				}
-			}
-		</script>
-		<script type="module"></script>
+        {
+            "imports": {
+                "three": "./build/three.module.js",
+                "three/addons/": "./jsm/"
+            }
+        }
+    </script>
     <script type="module" src="js/main.js"></script>
-
+    <script src="https://cdn.jsdelivr.net/npm/cannon@0.6.2/build/cannon.min.js"></script>
 </body>
 
 </html>

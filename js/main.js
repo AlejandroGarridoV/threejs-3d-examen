@@ -27,7 +27,8 @@ const moveDirection = { forward: false, backward: false, left: false, right: fal
 // Coordenadas únicas del personaje
 let characterPosition = { x: 0, z: 0 };
 
-let cube; // Variable para el cubo
+const cubes = []; // Array para almacenar los cubos
+let collectedCubes = 0; // Contador de cubos recolectados
 
 init();
 
@@ -88,14 +89,21 @@ function init() {
         loadAsset(params.asset);
     });
 
-    // Crear y añadir el cubo
+    // Crear y añadir 50 cubos
+    const numCubes = 50;
     const cubeGeometry = new THREE.BoxGeometry(50, 50, 50);
     const cubeMaterial = new THREE.MeshPhongMaterial({ color: 0x00ff00 });
-    cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
-    cube.position.set(100, 25, 100); // Posición inicial del cubo
-    cube.castShadow = true;
-    cube.receiveShadow = true;
-    scene.add(cube);
+
+    for (let i = 0; i < numCubes; i++) {
+        const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+        const x = (Math.random() - 0.5) * 10000; // Asegúrate de que estén dentro del plano del suelo
+        const z = (Math.random() - 0.5) * 10000;
+        cube.position.set(x, 25, z); // Posición inicial del cubo
+        cube.castShadow = true;
+        cube.receiveShadow = true;
+        scene.add(cube);
+        cubes.push(cube);
+    }
 
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setPixelRatio(window.devicePixelRatio);
@@ -346,15 +354,27 @@ function animate() {
         lookAtPosition.copy(object.position).add(lookAtOffset);
         camera.lookAt(lookAtPosition);
 
-        // Detectar colisión con el cubo
-        if (object.position.distanceTo(cube.position) < 50) {
-            console.log('¡Colisión con el cubo!');
-            // Acción de interacción con el cubo (por ejemplo, cambiar el color del cubo)
-            cube.material.color.set(0xff0000);
-        } else {
-            // Restaurar el color original del cubo cuando no hay colisión
-            cube.material.color.set(0x00ff00);
-        }
+        // Detectar colisión con los cubos
+        cubes.forEach((cube, index) => {
+            if (object.position.distanceTo(cube.position) < 50) {
+                console.log('¡Colisión con el cubo!');
+                
+                // Eliminar el cubo visualmente
+                scene.remove(cube);
+                cubes.splice(index, 1);  // Eliminar el cubo del array
+
+                // También podrías liberar recursos del cubo si es necesario
+                cube.geometry.dispose();
+                cube.material.dispose();
+
+                // Incrementar el contador de cubos recolectados
+                collectedCubes++;
+                document.getElementById('points-counter').innerText = `Cubos recolectados: ${collectedCubes}`;
+
+                // Otras acciones que desees realizar al colisionar con el cubo
+                // Por ejemplo, cambiar el color del cubo o reproducir un efecto de sonido
+            }
+        });
     }
 
     renderer.render(scene, camera);
