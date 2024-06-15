@@ -44,7 +44,7 @@ function init() {
     scene.background = new THREE.Color(0x000000);
     scene.fog = new THREE.Fog(0x000000, 200, 1000);
 
-    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.05);
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.5);
     hemiLight.position.set(0, 200, 0);
     scene.add(hemiLight);
 
@@ -93,8 +93,12 @@ function init() {
     // Crear y añadir 50 cubos
     const numCubes = 50;
     const cubeGeometry = new THREE.BoxGeometry(50, 50, 50);
-    const cubeMaterial = new THREE.MeshPhongMaterial({ color: 0x00ff00 });
-
+    const cubeMaterial = new THREE.MeshStandardMaterial({
+        color: 0x59f4ff,             // Color base del material
+        emissive: 0x59f4ff,          // Color de la emisión de luz
+        emissiveIntensity: 0.5       // Intensidad de la emisión de luz
+    });
+    
     for (let i = 0; i < numCubes; i++) {
         const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
         const x = (Math.random() - 0.5) * 10000; // Asegúrate de que estén dentro del plano del suelo
@@ -104,6 +108,8 @@ function init() {
         cube.receiveShadow = true;
         scene.add(cube);
         cubes.push(cube);
+        const pointLight = new THREE.PointLight(0x59f4ff, 100);
+        cube.add(pointLight); // Agregar la luz como hijo del cubo
     }
 
     renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -250,7 +256,7 @@ function onCtrlKeyDown(event) {
 }
 
 function onMouseDown(event) {
-    if (event.button === 1) { // Botón derecho del ratón
+    if (event.button === 2) { // Botón derecho del ratón
         params.asset = 'Throw';
         console.log('Switching to Throw asset');
         if (!actions['Throw']) loadAsset(params.asset);
@@ -273,7 +279,7 @@ function stopMainMovement() {
 function onKeyDown(event) {
     let actionChanged = false;
     switch (event.code) {
-        case 'ArrowUp':
+
         case 'KeyW':
             moveDirection.forward = true;
             if (params.asset !== 'Walk') {
@@ -282,7 +288,6 @@ function onKeyDown(event) {
             }
             break;
 
-        case 'ArrowLeft':
         case 'KeyA':
             moveDirection.left = true;
             if (params.asset !== 'Left Walk') {
@@ -291,7 +296,7 @@ function onKeyDown(event) {
             }
             break;
 
-        case 'ArrowDown':
+
         case 'KeyS':
             moveDirection.backward = true;
             if (params.asset !== 'Walk Back') {
@@ -300,7 +305,7 @@ function onKeyDown(event) {
             }
             break;
 
-        case 'ArrowRight':
+
         case 'KeyD':
             moveDirection.right = true;
             if (params.asset !== 'Right Walk') {
@@ -331,29 +336,34 @@ function onKeyUp(event) {
         case 'KeyW':
             moveDirection.forward = false;
             stopMovement = true;
+            params.asset = 'Idle';
             break;
 
         case 'ArrowLeft':
         case 'KeyA':
             moveDirection.left = false;
             stopMovement = true;
+            params.asset = 'Idle';
             break;
 
         case 'ArrowDown':
         case 'KeyS':
             moveDirection.backward = false;
             stopMovement = true;
+            params.asset = 'Idle';
             break;
 
         case 'ArrowRight':
         case 'KeyD':
             moveDirection.right = false;
             stopMovement = true;
+            params.asset = 'Idle';
             break;
 
         case 'Space':
             moveDirection.jump = false;
             stopMovement = true;
+            params.asset = 'Idle';
             break;
     }
 
