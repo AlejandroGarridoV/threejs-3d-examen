@@ -31,6 +31,10 @@ let characterPosition = { x: 0, z: 0 };
 const cubes = []; // Array para almacenar los cubos
 let collectedCubes = 0; // Contador de cubos recolectados
 
+// Crear cuadrícula espacial
+const gridSize = 500; // Tamaño de cada celda de la cuadrícula
+const spatialGrid = {};
+
 init();
 
 function init() {
@@ -110,6 +114,15 @@ function init() {
         cubes.push(cube);
         const pointLight = new THREE.PointLight(0x59f4ff, 100);
         cube.add(pointLight); // Agregar la luz como hijo del cubo
+        
+        // Añadir cubo a la cuadrícula espacial
+        const gridX = Math.floor(x / gridSize);
+        const gridZ = Math.floor(z / gridSize);
+        const key = `${gridX},${gridZ}`;
+        if (!spatialGrid[key]) {
+            spatialGrid[key] = [];
+        }
+        spatialGrid[key].push(cube);
     }
 
     renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -381,12 +394,23 @@ function animate() {
         characterPosition.x = object.position.x;
         characterPosition.z = object.position.z;
 
-        // Colisión con cubos
-        cubes.forEach((cube, index) => {
+        // Colisión con cubos usando cuadrícula espacial
+        const gridX = Math.floor(characterPosition.x / gridSize);
+        const gridZ = Math.floor(characterPosition.z / gridSize);
+        const nearbyCubes = [];
+        for (let x = gridX - 1; x <= gridX + 1; x++) {
+            for (let z = gridZ - 1; z <= gridZ + 1; z++) {
+                const key = `${x},${z}`;
+                if (spatialGrid[key]) {
+                    nearbyCubes.push(...spatialGrid[key]);
+                }
+            }
+        }
+        nearbyCubes.forEach((cube, index) => {
             const distance = Math.sqrt((cube.position.x - characterPosition.x) ** 2 + (cube.position.z - characterPosition.z) ** 2);
             if (distance < 50) { // Supongamos que 50 es la distancia mínima para recoger un cubo
                 scene.remove(cube); // Elimina el cubo de la escena
-                cubes.splice(index, 1); // Elimina el cubo del array
+                nearbyCubes.splice(index, 1); // Elimina el cubo del array
                 collectedCubes++; // Incrementa el contador de cubos recolectados
                 document.getElementById('points-counter').innerText = `Cubos recolectados: ${collectedCubes}`; // Actualiza el contador en la interfaz
             }
