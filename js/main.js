@@ -4,7 +4,7 @@ import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 
-let camera, scene, renderer, stats, object, loader, guiMorphsFolder, controls, spotLight;
+let camera, scene, renderer, stats, object, loader, guiMorphsFolder, controls;
 const clock = new THREE.Clock();
 let mixer, currentAction, actions = {};
 const params = {
@@ -18,7 +18,7 @@ const assets = {
     'Left Walk': null,
     'Right Walk': null,
     'Jump': null,
-    'kick': null,
+    'Kick': null,
     'Throw': null
 };
 
@@ -70,17 +70,6 @@ function init() {
 
     flickerLight();
 
-    // Crear la luz del foco (linterna) y agregarla a la cámara
-    spotLight = new THREE.SpotLight(0xffffff);
-    spotLight.angle = Math.PI / 6; // Ajusta el ángulo del cono de luz
-    spotLight.penumbra = 0.1; // Ajusta la penumbra (borde suave)
-    spotLight.intensity = 2; // Ajusta la intensidad de la luz
-    spotLight.distance = 1000; // Ajusta la distancia máxima del alcance de la luz
-    spotLight.position.set(0, 0, 0);
-    spotLight.target.position.set(0, 0, -1); // La luz apunta hacia adelante
-    camera.add(spotLight);
-    camera.add(spotLight.target);
-
     // Cargar la textura del suelo
     const textureLoader = new THREE.TextureLoader();
     const groundTexture = textureLoader.load('textures/suelo/piso.jpg');
@@ -106,7 +95,7 @@ function init() {
         preloadAsset('Left Walk'),
         preloadAsset('Right Walk'),
         preloadAsset('Jump'),
-        preloadAsset('kick'),
+        preloadAsset('Kick'),
         preloadAsset('Throw')
     ]).then(() => {
         loadAsset(params.asset);
@@ -244,107 +233,154 @@ function loadAsset(asset) {
         if (child.isMesh) {
             child.castShadow = true;
             child.receiveShadow = true;
+            if (child.morphTargetDictionary) {
+                guiMorphsFolder.show();
+                const meshFolder = guiMorphsFolder.addFolder(child.name || child.uuid);
+                Object.keys(child.morphTargetDictionary).forEach((key) => {
+                    meshFolder.add(child.morphTargetInfluences, child.morphTargetDictionary[key], 0, 1, 0.01);
+                });
+            }
         }
     });
 
     scene.add(object);
 
-    // Posicionar el objeto en la posición actual del personaje
-    object.position.set(characterPosition.x, 0, characterPosition.z);
-
-    if (mixer && object.animations && object.animations.length) {
-        const morphs = object.animations[0].tracks.filter(track => track.name.includes('morphTargetInfluences'));
-        if (morphs.length) {
-            guiMorphsFolder.show();
-            morphs.forEach(morph => {
-                guiMorphsFolder.add(morph, 'value', 0, 1, 0.01).name(morph.name.split('.')[2]);
-            });
-        }
+    // Asegurar que el personaje esté al nivel del suelo al cargar el asset
+    if (object) {
+        object.position.y = 25; // Ajusta la altura según la geometría del personaje
     }
+}
+
+function switchAnimation(newAction) {
+    if (currentAction && newAction !== currentAction) {
+        currentAction.fadeOut(0.2);
+    }
+    newAction.reset().fadeIn(0.2).play();
+    currentAction = newAction;
 }
 
 function onWindowResize() {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
-
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
+function onCtrlKeyDown(event) {
+    if (event.code === 'ControlLeft') {
+        params.asset = 'Kick';
+        console.log('Switching to Kick asset');
+        loadAsset(params.asset);
+        
+        // Detener el movimiento principal
+        stopMainMovement();
+    }
+}
+
+function onMouseDown(event) {
+    if (event.button === 1) { // Botón derecho del ratón
+        params.asset = 'Throw';
+        console.log('Switching to Throw asset');
+        loadAsset(params.asset);
+        
+        // Detener el movimiento principal
+        stopMainMovement();
+    }
+}
+
+function stopMainMovement() {
+    // Detener el movimiento principal si se está ejecutando
+    if (params.asset !== 'Idle' && params.asset !== 'Kick' && params.asset !== 'Throw') {
+        params.asset = 'Idle';
+        console.log('Switching to Idle asset');
+        loadAsset(params.asset);
+    }
+}
+
 function onKeyDown(event) {
-    switch (event.keyCode) {
-        case 38: // up
-        case 87: // w
-            moveDirection.forward = true;
-            break;
-        case 37: // left
-        case 65: // a
-            moveDirection.left = true;
-            break;
-        case 40: // down
-        case 83: // s
+    switch (event.code) {
+        case 'KeyS':
             moveDirection.backward = true;
+            if (params.asset !== 'Walk Back') {
+                params.asset = 'Walk Back';
+                console.log('Switching to Walk Back asset');
+                loadAsset(params.asset);
+            }
+            document.getElementById('audioSteps').play();
             break;
-        case 39: // right
-        case 68: // d
+        case 'KeyW':
+            moveDirection.forward = true;
+            if (params.asset !== 'Walk') {
+                params.asset = 'Walk';
+                console.log('Switching to Walk asset');
+                loadAsset(params.asset);
+            }
+            // Reproducir el audio
+            document.getElementById('audioSteps').play();
+            break;
+        case 'KeyA':
+            moveDirection.left = true;
+            if (params.asset !== 'Left Walk') {
+                params.asset = 'Left Walk';
+                console.log('Switching to Left Walk asset');
+                loadAsset(params.asset);
+            }
+            document.getElementById('audioSteps').play();
+            break;
+        case 'KeyD':
             moveDirection.right = true;
+            if (params.asset !== 'Right Walk') {
+                params.asset = 'Right Walk';
+                console.log('Switching to Right Walk asset');
+                loadAsset(params.asset);
+            }
+            document.getElementById('audioSteps').play();
             break;
-        case 32: // space (saltará)
+        case 'Space':
             moveDirection.jump = true;
+            if (params.asset !== 'Jump') {
+                params.asset = 'Jump';
+                console.log('Switching to Jump asset');
+                loadAsset(params.asset);
+            }
             break;
     }
 }
 
 function onKeyUp(event) {
-    switch (event.keyCode) {
-        case 38: // up
-        case 87: // w
-            moveDirection.forward = false;
-            break;
-        case 37: // left
-        case 65: // a
-            moveDirection.left = false;
-            break;
-        case 40: // down
-        case 83: // s
+    switch (event.code) {
+        case 'KeyS':
             moveDirection.backward = false;
+            document.getElementById('audioSteps').pause();
+            document.getElementById('audioSteps').currentTime = 0; // Reiniciar el audio al principio
             break;
-        case 39: // right
-        case 68: // d
+        case 'KeyW':
+            moveDirection.forward = false;
+            document.getElementById('audioSteps').pause();
+            document.getElementById('audioSteps').currentTime = 0; // Reiniciar el audio al principio
+            break;
+        case 'KeyA':
+            moveDirection.left = false;
+            document.getElementById('audioSteps').pause();
+            document.getElementById('audioSteps').currentTime = 0; // Reiniciar el audio al principio
+            break;
+        case 'KeyD':
             moveDirection.right = false;
+            document.getElementById('audioSteps').pause();
+            document.getElementById('audioSteps').currentTime = 0; // Reiniciar el audio al principio
             break;
-        case 32: // space (dejará de saltar)
+        case 'Space':
             moveDirection.jump = false;
+            document.getElementById('audioSteps').pause();
+            document.getElementById('audioSteps').currentTime = 0; // Reiniciar el audio al principio
             break;
     }
-}
-
-function onCtrlKeyDown(event) {
-    if (event.ctrlKey) {
-        switch (event.keyCode) {
-            case 65: // Ctrl + A
-                performAction('kick');
-                break;
-            case 83: // Ctrl + S
-                performAction('Throw');
-                break;
+    if (!moveDirection.forward && !moveDirection.backward && !moveDirection.left && !moveDirection.right && !moveDirection.jump) {
+        if (params.asset !== 'Idle' && params.asset !== 'Kick' && params.asset !== 'Throw') {
+            params.asset = 'Idle';
+            console.log('Switching to Idle asset');
+            loadAsset(params.asset);
         }
     }
-}
-
-function onMouseDown(event) {
-    if (event.button === 0) {
-        performAction('kick');
-    }
-}
-
-function performAction(actionName) {
-    if (currentAction) {
-        currentAction.stop();
-    }
-    currentAction = mixer.clipAction(assets[actionName].animations[0]);
-    currentAction.reset();
-    currentAction.play();
-    actions[actionName] = currentAction;
 }
 
 function animate() {
@@ -352,42 +388,68 @@ function animate() {
 
     if (mixer) mixer.update(delta);
 
-    // Actualizar la posición del personaje
-    const moveX = (moveDirection.left ? -1 : 0) + (moveDirection.right ? 1 : 0);
-    const moveZ = (moveDirection.forward ? -1 : 0) + (moveDirection.backward ? 1 : 0);
+    // Movimiento de la cámara
+    if (controls.isLocked === true) {
+        const moveDistance = moveSpeed * delta;
 
-    // Ajustar la posición en el plano XZ
-    characterPosition.x += moveX * moveSpeed * delta;
-    characterPosition.z += moveZ * moveSpeed * delta;
+        if (moveDirection.forward) controls.moveForward(moveDistance);
+        if (moveDirection.backward) controls.moveForward(-moveDistance);
+        if (moveDirection.left) controls.moveRight(-moveDistance);
+        if (moveDirection.right) controls.moveRight(moveDistance);
 
-    // Mover el objeto en la escena
-    if (object) {
-        object.position.x = characterPosition.x;
-        object.position.z = characterPosition.z;
-    }
+        // Actualizar la posición del personaje para que esté ligeramente a la izquierda de la cámara
+        if (object) {
+            const offsetDistance = 250; // Ajusta esta distancia según sea necesario
+            const direction = new THREE.Vector3();
+            camera.getWorldDirection(direction);
+            const leftOffset = new THREE.Vector3().crossVectors(direction, camera.up).normalize().multiplyScalar(-70); // Ajusta 70 para mover el personaje más o menos a la izquierda
+            object.position.copy(camera.position).add(direction.multiplyScalar(offsetDistance)).add(leftOffset);
+            object.position.y = 25; // Asegura que el personaje esté a nivel del suelo
 
-    // Actualizar la posición de la cámara
-    if (camera) {
-        camera.position.x = characterPosition.x;
-        camera.position.z = characterPosition.z;
-    }
-
-    // Comprobar colisiones con los cubos
-    for (let i = 0; i < cubes.length; i++) {
-        const cube = cubes[i];
-        const distance = object.position.distanceTo(cube.position);
-
-        if (distance < 50) { // Si la distancia es menor que 50 (radio del personaje + radio del cubo)
-            scene.remove(cube);
-            cubes.splice(i, 1); // Eliminar el cubo del array
-            i--; // Ajustar el índice para el siguiente bucle
-            collectedCubes++; // Incrementar el contador de cubos recolectados
-            console.log('Cubos recolectados:', collectedCubes);
+            // Asegurar que el personaje siempre le dé la espalda a la cámara
+            const cameraDirection = new THREE.Vector3();
+            camera.getWorldDirection(cameraDirection);
+            const angle = Math.atan2(cameraDirection.x, cameraDirection.z);
+            object.rotation.y = angle + Math.PI + 160;
         }
+
+        // Actualizar la posición del personaje en el eje x y z
+        characterPosition.x = object.position.x;
+        characterPosition.z = object.position.z;
+
+        // Colisión con cubos usando cuadrícula espacial
+        const gridX = Math.floor(characterPosition.x / gridSize);
+        const gridZ = Math.floor(characterPosition.z / gridSize);
+        const nearbyCubes = [];
+        for (let x = gridX - 1; x <= gridX + 1; x++) {
+            for (let z = gridZ - 1; z <= gridZ + 1; z++) {
+                const key = `${x},${z}`;
+                if (spatialGrid[key]) {
+                    nearbyCubes.push(...spatialGrid[key]);
+                }
+            }
+        }
+        nearbyCubes.forEach((cube, index) => {
+            const distance = Math.sqrt((cube.position.x - characterPosition.x) ** 2 + (cube.position.z - characterPosition.z) ** 2);
+            if (distance < 50) { // Supongamos que 50 es la distancia mínima para recoger un cubo
+                scene.remove(cube); // Elimina el cubo de la escena
+
+                // Elimina el cubo de la cuadrícula espacial
+                const cubeGridX = Math.floor(cube.position.x / gridSize);
+                const cubeGridZ = Math.floor(cube.position.z / gridSize);
+                const cubeKey = `${cubeGridX},${cubeGridZ}`;
+                spatialGrid[cubeKey] = spatialGrid[cubeKey].filter(item => item !== cube);
+
+                // Elimina el cubo del array de cubos cercanos
+                nearbyCubes.splice(index, 1); 
+
+                // Incrementa el contador de cubos recolectados
+                collectedCubes++; 
+                document.getElementById('points-counter').innerText = `Cajas recolectadas: ${collectedCubes}`; // Actualiza el contador en la interfaz
+            }
+        });
     }
 
-    // Renderizar la escena y actualizar los controles
     renderer.render(scene, camera);
-    controls.update(delta);
     stats.update();
 }
