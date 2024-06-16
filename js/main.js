@@ -46,7 +46,7 @@ function init() {
 
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x000000);
-    scene.fog = new THREE.Fog(0x000000, 200, 1000);
+    scene.fog = new THREE.Fog(0x000000, 300, 1000);
 
     const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.5);
     hemiLight.position.set(0, 200, 0);
@@ -62,7 +62,7 @@ function init() {
     scene.add(dirLight);
 
     function flickerLight() {
-        const intensity = Math.random() * 30;
+        const intensity = Math.random() * 0.5;
         dirLight.intensity = intensity;
         const flickerInterval = Math.random() * 500;
         setTimeout(flickerLight, flickerInterval);
@@ -70,7 +70,14 @@ function init() {
 
     flickerLight();
 
-    const groundMesh = new THREE.Mesh(new THREE.PlaneGeometry(20000, 20000), new THREE.MeshPhongMaterial({ color: 0x000000, depthWrite: false }));
+    // Cargar la textura del suelo
+    const textureLoader = new THREE.TextureLoader();
+    const groundTexture = textureLoader.load('textures/suelo/piso.jpg');
+    groundTexture.wrapS = THREE.RepeatWrapping;
+    groundTexture.wrapT = THREE.RepeatWrapping;
+    groundTexture.repeat.set(100, 100);
+
+    const groundMesh = new THREE.Mesh(new THREE.PlaneGeometry(20000, 20000), new THREE.MeshPhongMaterial({ map: groundTexture, depthWrite: false }));
     groundMesh.rotation.x = - Math.PI / 2;
     groundMesh.receiveShadow = true;
     scene.add(groundMesh);
@@ -94,15 +101,17 @@ function init() {
         loadAsset(params.asset);
     });
 
+    // Cargar la textura para los cubos
+    const cubeTexture = textureLoader.load('textures/caja.gif');
+
     // Crear y añadir 50 cubos
     const numCubes = 50;
     const cubeGeometry = new THREE.BoxGeometry(50, 50, 50);
     const cubeMaterial = new THREE.MeshStandardMaterial({
-        color: 0x59f4ff,             // Color base del material
-        emissive: 0x59f4ff,          // Color de la emisión de luz
-        emissiveIntensity: 0.5       // Intensidad de la emisión de luz
+        map: cubeTexture,
+        
     });
-    
+
     for (let i = 0; i < numCubes; i++) {
         const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
         const x = (Math.random() - 0.5) * 10000; // Asegúrate de que estén dentro del plano del suelo
@@ -114,7 +123,7 @@ function init() {
         cubes.push(cube);
         const pointLight = new THREE.PointLight(0x59f4ff, 100);
         cube.add(pointLight); // Agregar la luz como hijo del cubo
-        
+
         // Añadir cubo a la cuadrícula espacial
         const gridX = Math.floor(x / gridSize);
         const gridZ = Math.floor(z / gridSize);
@@ -298,6 +307,7 @@ function onKeyDown(event) {
                 console.log('Switching to Walk Back asset');
                 loadAsset(params.asset);
             }
+            document.getElementById('audioSteps').play();
             break;
         case 'KeyW':
             moveDirection.forward = true;
@@ -306,6 +316,8 @@ function onKeyDown(event) {
                 console.log('Switching to Walk asset');
                 loadAsset(params.asset);
             }
+            // Reproducir el audio
+            document.getElementById('audioSteps').play();
             break;
         case 'KeyA':
             moveDirection.left = true;
@@ -314,6 +326,7 @@ function onKeyDown(event) {
                 console.log('Switching to Left Walk asset');
                 loadAsset(params.asset);
             }
+            document.getElementById('audioSteps').play();
             break;
         case 'KeyD':
             moveDirection.right = true;
@@ -322,6 +335,7 @@ function onKeyDown(event) {
                 console.log('Switching to Right Walk asset');
                 loadAsset(params.asset);
             }
+            document.getElementById('audioSteps').play();
             break;
         case 'Space':
             moveDirection.jump = true;
@@ -333,22 +347,33 @@ function onKeyDown(event) {
             break;
     }
 }
+
 function onKeyUp(event) {
     switch (event.code) {
         case 'KeyS':
             moveDirection.backward = false;
+            document.getElementById('audioSteps').pause();
+            document.getElementById('audioSteps').currentTime = 0; // Reiniciar el audio al principio
             break;
         case 'KeyW':
             moveDirection.forward = false;
+            document.getElementById('audioSteps').pause();
+            document.getElementById('audioSteps').currentTime = 0; // Reiniciar el audio al principio
             break;
         case 'KeyA':
             moveDirection.left = false;
+            document.getElementById('audioSteps').pause();
+            document.getElementById('audioSteps').currentTime = 0; // Reiniciar el audio al principio
             break;
         case 'KeyD':
             moveDirection.right = false;
+            document.getElementById('audioSteps').pause();
+            document.getElementById('audioSteps').currentTime = 0; // Reiniciar el audio al principio
             break;
         case 'Space':
             moveDirection.jump = false;
+            document.getElementById('audioSteps').pause();
+            document.getElementById('audioSteps').currentTime = 0; // Reiniciar el audio al principio
             break;
     }
     if (!moveDirection.forward && !moveDirection.backward && !moveDirection.left && !moveDirection.right && !moveDirection.jump) {
@@ -379,7 +404,7 @@ function animate() {
             const offsetDistance = 250; // Ajusta esta distancia según sea necesario
             const direction = new THREE.Vector3();
             camera.getWorldDirection(direction);
-            const leftOffset = new THREE.Vector3().crossVectors(direction, camera.up).normalize().multiplyScalar(-70); // Ajusta 30 para mover el personaje más o menos a la izquierda
+            const leftOffset = new THREE.Vector3().crossVectors(direction, camera.up).normalize().multiplyScalar(-70); // Ajusta 70 para mover el personaje más o menos a la izquierda
             object.position.copy(camera.position).add(direction.multiplyScalar(offsetDistance)).add(leftOffset);
             object.position.y = 25; // Asegura que el personaje esté a nivel del suelo
 
@@ -410,9 +435,19 @@ function animate() {
             const distance = Math.sqrt((cube.position.x - characterPosition.x) ** 2 + (cube.position.z - characterPosition.z) ** 2);
             if (distance < 50) { // Supongamos que 50 es la distancia mínima para recoger un cubo
                 scene.remove(cube); // Elimina el cubo de la escena
-                nearbyCubes.splice(index, 1); // Elimina el cubo del array
-                collectedCubes++; // Incrementa el contador de cubos recolectados
-                document.getElementById('points-counter').innerText = `Cubos recolectados: ${collectedCubes}`; // Actualiza el contador en la interfaz
+
+                // Elimina el cubo de la cuadrícula espacial
+                const cubeGridX = Math.floor(cube.position.x / gridSize);
+                const cubeGridZ = Math.floor(cube.position.z / gridSize);
+                const cubeKey = `${cubeGridX},${cubeGridZ}`;
+                spatialGrid[cubeKey] = spatialGrid[cubeKey].filter(item => item !== cube);
+
+                // Elimina el cubo del array de cubos cercanos
+                nearbyCubes.splice(index, 1); 
+
+                // Incrementa el contador de cubos recolectados
+                collectedCubes++; 
+                document.getElementById('points-counter').innerText = `Cajas recolectadas: ${collectedCubes}`; // Actualiza el contador en la interfaz
             }
         });
     }

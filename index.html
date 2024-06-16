@@ -48,16 +48,19 @@
 </head>
 
 <body>
-    <div id="points-counter">Cubos recolectados: 0</div> <!-- Div para mostrar el contador de puntos -->
+    <div id="points-counter">Cajas recolectadas: 0</div> <!-- Div para mostrar el contador de puntos -->
     <div id="blocker">
         <div id="instructions" style="text-align: center;">
-            <span style="font-size:36px; display: block;">Has click aquí para comenzar</span>
-            <span style="font-size:20px; display: block;">Espera a que aparezca el personaje.</span>
+            <span style="font-size:36px; display: block;">Haz click aquí para comenzar</span>
+            <span style="font-size:24px; display: block;">Espera a que aparezca el personaje.</span>
+            <span style="font-size:20px; display: block;">Recolecta las cajas de suministros</span>
         </div>
     </div>
-</body>
 
-    
+    <audio id="music" src="audio/Musica.mp3" loop preload="auto"></audio> <!-- Elemento audio para la música -->
+    <audio id="audioSteps" src="audio/pasos.mp3"></audio>
+
+
     <script type="importmap">
         {
             "imports": {
@@ -68,6 +71,21 @@
     </script>
     <script type="module" src="js/main.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/cannon@0.6.2/build/cannon.min.js"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function(event) {
+            var music = document.getElementById("music");
+
+            // Función para iniciar la música en el primer click
+            function startMusic() {
+                music.play();
+                document.removeEventListener("click", startMusic); // Remueve el listener después del primer click
+            }
+
+            // Listener para detectar el primer click en cualquier parte de la página
+            document.addEventListener("click", startMusic);
+        });
+    </script>
 </body>
 
 </html>
