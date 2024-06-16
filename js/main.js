@@ -277,98 +277,73 @@ function stopMainMovement() {
 }
 
 function onKeyDown(event) {
-    let actionChanged = false;
     switch (event.code) {
-
-        case 'KeyW':
-            moveDirection.forward = true;
-            if (params.asset !== 'Walk') {
-                params.asset = 'Walk';
-                actionChanged = true;
-            }
-            break;
-
-        case 'KeyA':
-            moveDirection.left = true;
-            if (params.asset !== 'Left Walk') {
-                params.asset = 'Left Walk';
-                actionChanged = true;
-            }
-            break;
-
-
         case 'KeyS':
             moveDirection.backward = true;
             if (params.asset !== 'Walk Back') {
                 params.asset = 'Walk Back';
-                actionChanged = true;
+                console.log('Switching to Walk Back asset');
+                loadAsset(params.asset);
             }
             break;
-
-
+        case 'KeyW':
+            moveDirection.forward = true;
+            if (params.asset !== 'Walk') {
+                params.asset = 'Walk';
+                console.log('Switching to Walk asset');
+                loadAsset(params.asset);
+            }
+            break;
+        case 'KeyA':
+            moveDirection.left = true;
+            if (params.asset !== 'Left Walk') {
+                params.asset = 'Left Walk';
+                console.log('Switching to Left Walk asset');
+                loadAsset(params.asset);
+            }
+            break;
         case 'KeyD':
             moveDirection.right = true;
             if (params.asset !== 'Right Walk') {
                 params.asset = 'Right Walk';
-                actionChanged = true;
+                console.log('Switching to Right Walk asset');
+                loadAsset(params.asset);
             }
             break;
-
         case 'Space':
             moveDirection.jump = true;
             if (params.asset !== 'Jump') {
                 params.asset = 'Jump';
-                actionChanged = true;
+                console.log('Switching to Jump asset');
+                loadAsset(params.asset);
             }
             break;
     }
-
-    if (actionChanged) {
-        if (!actions[params.asset]) loadAsset(params.asset);
-        else switchAnimation(actions[params.asset]);
-    }
 }
-
 function onKeyUp(event) {
-    let stopMovement = false;
     switch (event.code) {
-        case 'ArrowUp':
-        case 'KeyW':
-            moveDirection.forward = false;
-            stopMovement = true;
-            params.asset = 'Idle';
-            break;
-
-        case 'ArrowLeft':
-        case 'KeyA':
-            moveDirection.left = false;
-            stopMovement = true;
-            params.asset = 'Idle';
-            break;
-
-        case 'ArrowDown':
         case 'KeyS':
             moveDirection.backward = false;
-            stopMovement = true;
-            params.asset = 'Idle';
             break;
-
-        case 'ArrowRight':
+        case 'KeyW':
+            moveDirection.forward = false;
+            break;
+        case 'KeyA':
+            moveDirection.left = false;
+            break;
         case 'KeyD':
             moveDirection.right = false;
-            stopMovement = true;
-            params.asset = 'Idle';
             break;
-
         case 'Space':
             moveDirection.jump = false;
-            stopMovement = true;
-            params.asset = 'Idle';
             break;
     }
-
-    if (stopMovement && !moveDirection.forward && !moveDirection.backward && !moveDirection.left && !moveDirection.right && !moveDirection.jump) {
-        stopMainMovement();
+    if (!moveDirection.forward && !moveDirection.backward && !moveDirection.left && !moveDirection.right && !moveDirection.jump) {
+        if (params.asset !== 'Idle' && params.asset !== 'kick' && params.asset !== 'Throw') {
+            params.asset = 'Idle';
+            console.log('Switching to Idle asset');
+            loadAsset(params.asset);
+        }
     }
 }
 
