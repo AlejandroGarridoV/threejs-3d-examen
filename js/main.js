@@ -375,8 +375,8 @@ function createMaze() {
     }
 
     // Calcular el centro del laberinto
-    const centerX = (maxCols - 1) / 17 -2 * gridSize;
-    const centerZ = (maxRows - 1) / 5000 * gridSize;
+    const centerX = (maxCols - 1) / 17 -20 * gridSize;
+    const centerZ = (maxRows - 1) / 2 * gridSize;
     
 
     for (let row = 0; row < mazeLayout.length; row++) {
@@ -394,6 +394,7 @@ function createMaze() {
                 wall.castShadow = true;
                 wall.receiveShadow = true;
                 scene.add(wall);
+                wallCollisions.push(wall);
             }
         }
     }
@@ -419,6 +420,53 @@ function stopMainMovement() {
         console.log('Switching to Idle asset');
         loadAsset(params.asset);
     }
+}
+
+function updateMovement(delta) {
+    const moveX = (moveDirection.left ? -moveSpeed : 0) + (moveDirection.right ? moveSpeed : 0);
+    const moveZ = (moveDirection.forward ? -moveSpeed : 0) + (moveDirection.backward ? moveSpeed : 0);
+
+    if (moveX !== 0 || moveZ !== 0) {
+        const moveDistanceX = moveX * delta;
+        const moveDistanceZ = moveZ * delta;
+        
+        // Guardar la posición anterior del personaje
+        const previousPosition = object.position.clone();
+
+        // Mover el personaje
+        object.position.x += moveDistanceX;
+        object.position.z += moveDistanceZ;
+
+        // Verificar colisiones con muros
+        if (checkWallCollisions(object)) {
+            // Si hay colisión, restaurar la posición anterior
+            object.position.copy(previousPosition);
+        }
+    }
+
+    if (moveDirection.jump) {
+        object.position.y += moveSpeed * delta;
+    }
+}
+
+function checkWallCollisions(camera, character) {
+    const cameraBox = new THREE.Box3().setFromObject(camera);
+    const characterBox = new THREE.Box3().setFromObject(character);
+
+    for (const wall of wallCollisions) {
+        const wallBox = new THREE.Box3().setFromObject(wall);
+
+        if (cameraBox.intersectsBox(wallBox)) {
+            console.log('Camera collision detected with wall at position:', wall.position);
+            return true;
+        }
+
+        if (characterBox.intersectsBox(wallBox)) {
+            console.log('Character collision detected with wall at position:', wall.position);
+            return true;
+        }
+    }
+    return false;
 }
 
 function onKeyDown(event) {
@@ -516,6 +564,8 @@ function animate() {
     // Movimiento de la cámara
     if (controls.isLocked === true) {
         const moveDistance = moveSpeed * delta;
+        const initialCameraPosition = camera.position.clone(); // Guarda la posición inicial de la cámara
+        const initialCharacterPosition = object.position.clone(); // Guarda la posición inicial del personaje
 
         if (moveDirection.forward) controls.moveForward(moveDistance);
         if (moveDirection.backward) controls.moveForward(-moveDistance);
@@ -573,6 +623,12 @@ function animate() {
                 document.getElementById('points-counter').innerText = `Cajas recolectadas: ${collectedCubes}`; // Actualiza el contador en la interfaz
             }
         });
+
+        // Verificar colisiones con muros y revertir a la posición inicial si hay colisión
+        if (checkWallCollisions(camera, object)) {
+            camera.position.copy(initialCameraPosition);
+            object.position.copy(initialCharacterPosition);
+        }
     }
 
     renderer.render(scene, camera);
